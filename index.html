@@ -2,19 +2,18 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>KBS TV - Receptor Premium</title>
+    <title>KBS TV - Receptor Oficial</title>
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* PLAYER VÍDEO */
+        /* PLAYER ANTI-TRAVA PREENCHIDO */
         .video-js { width: 100% !important; height: 100% !important; }
         .vjs-tech { object-fit: fill !important; } 
-        #ad-img { width: 100%; height: 100%; }
 
-        /* NOTÍCIAS (ESTILO CARDS) */
+        /* DESIGN DAS NOTÍCIAS (SEU PADRÃO) */
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
         .news-card { background: #1e293b; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.4); animation: fadeIn 0.8s ease; flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
         .news-card img { width: 100%; height: 45%; object-fit: cover; }
@@ -23,7 +22,7 @@
         .title { font-size: 1.6rem; font-weight: bold; margin-bottom: 10px; line-height: 1.2; }
         .summary { font-size: 1rem; opacity: 0.8; }
 
-        /* ================= CLIMA DETALHADO (SEU ESTILO) ================= */
+        /* CLIMA DETALHADO (SEU ESTILO) */
         #weather-panel { display: none; height: 100%; padding: 25px; box-sizing: border-box; animation: fadeIn 1s ease; text-align: center; background: #0f172a; border-radius: 20px; }
         .current-weather { 
             display: flex; justify-content: space-around; align-items: center; 
@@ -33,8 +32,10 @@
         .temp-grande { font-size: 4.5rem; font-weight: bold; color: #f59e0b; line-height: 1; }
         .chart-container { height: 180px; background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 20px; margin-bottom: 15px; }
         .qr-section { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .qr-code-img { width: 120px; height: 120px; background: white; padding: 8px; border-radius: 15px; }
+        .qr-code-img { width: 120px; height: 120px; background: white; padding: 8px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .qr-call { font-size: 1.1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; }
+
+        .banner-img { position: absolute; object-fit: fill; z-index: 50; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -42,7 +43,6 @@
 <body>
 
     <div id="v-layer" class="layer"><video id="player" class="video-js vjs-default-skin" playsinline></video></div>
-    <div id="b-layer" class="layer"><img id="ad-img" src=""></div>
     
     <div id="n-layer" class="layer news-box">
         <div id="rotator" style="height: 100%;"></div>
@@ -67,6 +67,8 @@
         </div>
     </div>
 
+    <div id="banners-container"></div>
+
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -78,9 +80,10 @@
         const rtdb = getDatabase(app);
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
-        // PLAYER ANTI-TRAVA
+        // --- PLAYER COM SISTEMA ANTI-TRAVA ---
         const player = videojs('player', { autoplay: true, muted: false, controls: false });
         const streamUrl = "https://srv3.zcast.com.br/kbstv/kbstv/playlist.m3u8";
+
         function loadSinal() { 
             player.src({ src: streamUrl + "?t=" + Date.now(), type: "application/x-mpegURL" }); 
             player.play().catch(() => { player.muted(true); player.play(); });
@@ -89,17 +92,34 @@
         let lastT = -1; setInterval(() => { if(!player.paused()){ if(player.currentTime()===lastT) loadSinal(); lastT=player.currentTime(); } }, 10000);
         loadSinal();
 
-        // CONTROLE LAYOUT
-        onValue(ref(rtdb, 'kbs_pro_v3'), (snap) => {
+        // --- SINCRONIA COM NOVO ADMIN (VÍDEO, NOTÍCIAS E 6 BANNERS) ---
+        onValue(ref(rtdb, 'kbs_multi_v1'), (snap) => {
             const s = snap.val(); if(!s) return;
+            
+            // Posiciona Vídeo e Bloco de Notícias
             const up = (id, d) => { const el = document.getElementById(id); el.style.left = d.x + "%"; el.style.top = d.y + "%"; el.style.width = d.w + "%"; el.style.height = d.h + "%"; };
-            up('v-layer', s.video); up('b-layer', s.banner); up('n-layer', s.news);
+            up('v-layer', s.video); up('n-layer', s.news);
             document.getElementById('n-layer').style.backgroundColor = s.nBg;
-            if(s.bUrl) document.getElementById('ad-img').src = s.bUrl;
-            document.getElementById('ad-img').style.objectFit = s.bFit || 'fill';
+
+            // Renderiza os 6 Banners Independentes
+            const bContainer = document.getElementById('banners-container');
+            bContainer.innerHTML = ""; 
+            if(s.banners) {
+                Object.keys(s.banners).forEach(key => {
+                    const b = s.banners[key];
+                    if(b.url && b.url.trim() !== "") {
+                        const img = document.createElement('img');
+                        img.className = "banner-img";
+                        img.src = b.url;
+                        img.style.left = b.x + "%"; img.style.top = b.y + "%";
+                        img.style.width = b.w + "%"; img.style.height = b.h + "%";
+                        bContainer.appendChild(img);
+                    }
+                });
+            }
         });
 
-        // LÓGICA NOTÍCIAS + CLIMA
+        // --- LÓGICA DE NOTÍCIAS E CLIMA ---
         let allArticles = []; let currentIndex = 0; let isWeatherShowing = false; let chartInstance = null;
 
         async function showWeather() {
@@ -130,7 +150,7 @@
                     }
                 });
             } catch (e) {}
-            setTimeout(() => { isWeatherShowing = false; currentIndex = 0; rotation(); }, 20000); // 20s de clima
+            setTimeout(() => { isWeatherShowing = false; currentIndex = 0; rotation(); }, 20000); 
         }
 
         function rotation() {
@@ -154,7 +174,7 @@
             `).join('');
 
             currentIndex += 2;
-            setTimeout(rotation, 25000); // 25s por notícia
+            setTimeout(rotation, 25000); // 25 segundos por notícia
         }
 
         onSnapshot(query(collection(db, 'artifacts/default-app-id/users/pzyclksOaGTWrl3x3swL40JECw42/news')), (snap) => {
