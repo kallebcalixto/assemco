@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <style>
+        body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: sans-serif; }
+        .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
+        
+        /* PLAYER FORÇADO A PREENCHER O ESPAÇO DESIGNADO */
+        .video-js { width: 100% !important; height: 100% !important; }
+        .vjs-tech { object-fit: fill !important; } /* Isso remove as faixas pretas internas */
+        
+        #ad-img { width: 100%; height: 100%; }
+        
+        .news-box { display: flex; flex-direction: column; padding: 15px; box-sizing: border-box; gap: 10px; }
+        .news-item { background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; color: white; flex: 1; display: flex; flex-direction: column; }
+        .n-img { width: 100%; height: 60%; object-fit: cover; }
+        .n-txt { padding: 10px; font-weight: bold; font-size: 1.3rem; }
+    </style>
+</head>
+<body>
+    <div id="v-layer" class="layer"><video id="player" class="video-js vjs-default-skin" autoplay muted playsinline></video></div>
+    <div id="b-layer" class="layer"><img id="ad-img" src=""></div>
+    <div id="n-layer" class="layer news-box"><div id="news-list" style="height:100%; display:flex; flex-direction:column; gap:10px;"></div></div>
+
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getFirestore, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const config = { apiKey: "AIzaSyCvjIztzLkcCg1Tz24F6FphT4z-o1gvDU0", databaseURL: "https://assemco-8331e-default-rtdb.firebaseio.com", projectId: "assemco-8331e" };
+        const app = initializeApp(config);
+        const rtdb = getDatabase(app);
+        const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
+
+        onValue(ref(rtdb, 'kbs_pro_v3'), (snap) => {
+            const s = snap.val(); if(!s) return;
+            const up = (id, d) => {
+                const el = document.getElementById(id);
+                el.style.left = d.x + "%"; el.style.top = d.y + "%";
+                el.style.width = d.w + "%"; el.style.height = d.h + "%";
+            };
+            up('v-layer', s.video); up('b-layer', s.banner); up('n-layer', s.news);
+            
+            document.getElementById('n-layer').style.backgroundColor = s.nBg;
+            const img = document.getElementById('ad-img');
+            img.style.objectFit = s.bFit || 'fill';
+            if(s.bUrl) img.src = s.bUrl;
+        });
+
+        const nRef = collection(db, 'artifacts/default-app-id/users/pzyclksOaGTWrl3x3swL40JECw42/news');
+        let arts = []; let i = 0;
+        function show() {
+            const list = document.getElementById("news-list");
+            const p = arts.slice(i, i + 2);
+            if (p.length > 0) {
+                list.innerHTML = p.map(a => `<div class="news-item"><img src="${a.cover}" class="n-img"><div class="n-txt">${a.title}</div></div>`).join('');
+                i = (i + 2) % arts.length;
+            }
+            setTimeout(show, 15000);
+        }
+        onSnapshot(query(nRef), (s) => { arts = []; s.forEach(d => arts.push(d.data())); if(arts.length > 0 && i === 0) show(); });
+
+        videojs('player').src({ src: "https://srv3.zcast.com.br/kbstv/kbstv/playlist.m3u8", type: "application/x-mpegURL" });
+    </script>
+</body>
+</html>
