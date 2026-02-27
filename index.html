@@ -10,12 +10,28 @@
         .video-js { width: 100% !important; height: 100% !important; }
         .vjs-tech { object-fit: fill !important; } 
         #ad-img { width: 100%; height: 100%; }
+        
         .news-box { display: flex; flex-direction: column; padding: 0; box-sizing: border-box; }
         #news-list { height: 100%; display: flex; flex-direction: column; gap: 2px; }
-        .news-item { background: rgba(0,0,0,0.2); flex: 1; overflow: hidden; display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .news-item { background: rgba(0,0,0,0.2); flex: 1; overflow: hidden; display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.1); position: relative; }
         .n-img { width: 100%; height: 55%; object-fit: cover; }
         .n-txt { padding: 15px; color: white; font-weight: 900; font-size: 1.8rem; line-height: 1.1; text-transform: uppercase; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
         .n-badge { background: #ff0000; color: white; font-size: 0.8rem; padding: 2px 8px; width: fit-content; margin: 10px 15px 0 15px; font-weight: bold; }
+
+        /* BLOCO DE PREVISÃO DO TEMPO */
+        .weather-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .weather-temp { font-size: 1.5rem; font-weight: 900; color: #facc15; }
+        .weather-city { font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -34,39 +50,22 @@
         const rtdb = getDatabase(app);
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
-        // --- CONFIGURAÇÃO DO PLAYER (AUTO-PLAY E ANTI-TRAVA) ---
-        const player = videojs('player', {
-            autoplay: true,
-            muted: false, // Tenta iniciar com som
-            controls: false,
-            fluid: false
-        });
-
+        // --- PLAYER COM ANTI-TRAVA ---
+        const player = videojs('player', { autoplay: true, muted: false, controls: false, fluid: false });
         const streamUrl = "https://srv3.zcast.com.br/kbstv/kbstv/playlist.m3u8";
 
         function carregarSinal() {
             player.src({ src: streamUrl + "?t=" + Date.now(), type: "application/x-mpegURL" });
-            player.play().catch(() => {
-                console.log("Browser bloqueou som. Iniciando mudo para garantir auto-play...");
-                player.muted(true);
-                player.play();
-            });
+            player.play().catch(() => { player.muted(true); player.play(); });
         }
-
-        // ANTI-TRAVA 1: Se der erro no carregamento
         player.on('error', () => setTimeout(carregarSinal, 5000));
-
-        // ANTI-TRAVA 2: Watchdog (Verifica se a imagem congelou)
         let lastTime = -1;
         setInterval(() => {
             if (!player.paused()) {
-                if (player.currentTime() === lastTime) {
-                    carregarSinal(); // Se o tempo não mudou, o vídeo travou. Reinicia.
-                }
+                if (player.currentTime() === lastTime) carregarSinal();
                 lastTime = player.currentTime();
             }
         }, 10000);
-
         carregarSinal();
 
         // --- SINCRONIA DE LAYOUT ---
@@ -79,13 +78,15 @@
             };
             up('v-layer', s.video); up('b-layer', s.banner); up('n-layer', s.news);
             document.getElementById('n-layer').style.backgroundColor = s.nBg;
-            document.getElementById('ad-img').style.objectFit = s.bFit || 'fill';
-            if(s.bUrl) document.getElementById('ad-img').src = s.bUrl;
+            const img = document.getElementById('ad-img');
+            img.style.objectFit = s.bFit || 'fill';
+            if(s.bUrl) img.src = s.bUrl;
         });
 
-        // --- NOTÍCIAS ---
+        // --- NOTÍCIAS COM CLIMA E 25 SEGUNDOS ---
         const nRef = collection(db, 'artifacts/default-app-id/users/pzyclksOaGTWrl3x3swL40JECw42/news');
         let arts = []; let i = 0;
+
         function show() {
             const list = document.getElementById("news-list");
             const p = arts.slice(i, i + 2);
@@ -93,13 +94,17 @@
                 list.innerHTML = p.map(a => `
                     <div class="news-item">
                         <img src="${a.cover}" class="n-img">
+                        <div class="weather-info">
+                            <div class="weather-temp">${a.temp || '--'}°</div>
+                            <div class="weather-city">${a.city || 'KBS'}</div>
+                        </div>
                         <div class="n-badge">KBS NOTÍCIAS</div>
                         <div class="n-txt">${a.title}</div>
                     </div>
                 `).join('');
                 i = (i + 2) % arts.length;
             }
-            setTimeout(show, 15000);
+            setTimeout(show, 25000); // MUDADO PARA 25 SEGUNDOS
         }
         onSnapshot(query(nRef), (s) => { arts = []; s.forEach(d => arts.push(d.data())); if(arts.length > 0 && i === 0) show(); });
     </script>
