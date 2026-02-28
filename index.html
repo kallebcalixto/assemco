@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>KBS TV - Receptor Oficial</title>
-    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
+        
+        /* --- PLAYER OTIMIZADO --- */
         .video-js { width: 100% !important; height: 100% !important; }
-        .vjs-tech { object-fit: fill !important; } 
+        .vjs-tech { object-fit: fill !important; -webkit-backface-visibility: hidden; } 
+        /* Esconde interface pesada */
+        .vjs-big-play-button, .vjs-loading-spinner, .vjs-control-bar { display: none !important; }
+
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
         .news-card { background: #1e293b; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.4); animation: fadeIn 0.8s ease; flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
         .news-card img { width: 100%; height: 45%; object-fit: cover; }
@@ -28,10 +33,10 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body>
+<body onclick="player.play(); player.muted(false);">
 
 <div id="v-layer" class="layer">
-    <video id="player" class="video-js vjs-default-skin" playsinline></video>
+    <video id="player" class="video-js vjs-default-skin" playsinline preload="auto"></video>
 </div>
 
 <div id="n-layer" class="layer news-box">
@@ -73,69 +78,70 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER ULTRA ESTÁVEL COM ÁUDIO
+   PLAYER ULTRA LEVE & ESTÁVEL 
 ============================ */
 
 const player = videojs('player', {
     autoplay: true,
-    muted: false,
     controls: false,
-    preload: 'auto'
+    html5: {
+        vhs: {
+            enableLowInitialPlaylist: true, // Começa mais rápido na menor qualidade
+            fastQualityChange: true,
+            overrideNative: true
+        }
+    }
 });
 
 const streamUrl = "https://srv3.zcast.com.br/kbstv/kbstv/playlist.m3u8";
-
-let lastTime = 0;
-let freezeCounter = 0;
+let lastTime = -1;
 
 function loadSinal() {
+    console.log("Recarregando sinal...");
     player.src({
-        src: streamUrl + "?cache=" + Date.now(),
+        src: streamUrl + "?t=" + Date.now(),
         type: "application/x-mpegURL"
     });
-    player.load();
-    player.play().catch(()=>{});
+    player.play().then(() => {
+        player.muted(false);
+    }).catch(() => {
+        player.muted(true);
+    });
 }
 
-player.on('error', () => {
-    setTimeout(loadSinal, 4000);
-});
-
+// Watchdog: Verifica travamento a cada 5 segundos
 setInterval(() => {
-    if (player.paused()) {
-        loadSinal();
-        return;
-    }
-    const current = player.currentTime();
-    if (current === lastTime) {
-        freezeCounter++;
-        if (freezeCounter >= 2) {
-            freezeCounter = 0;
-            loadSinal();
+    if (!player.paused()) {
+        const current = player.currentTime();
+        if (current === lastTime) {
+            loadSinal(); // Se o tempo parou, reinicia
         }
-    } else {
-        freezeCounter = 0;
+        lastTime = current;
     }
-    lastTime = current;
-}, 10000);
+}, 5000);
 
-setInterval(() => {
-    loadSinal();
-}, 180000);
+// Reinício preventivo a cada 4 minutos para limpar cache
+setInterval(loadSinal, 240000);
 
-window.addEventListener('online', () => {
-    setTimeout(loadSinal, 3000);
-});
+player.on('error', () => setTimeout(loadSinal, 3000));
+window.addEventListener('online', () => loadSinal());
 
 loadSinal();
 
 /* ============================
-   SINCRONIA ADMIN
+   SINCRONIA ADMIN (MANTIDA)
 ============================ */
 
 onValue(ref(rtdb, 'kbs_multi_v1'), (snap) => {
     const s = snap.val(); if(!s) return;
-    const up = (id, d) => { const el = document.getElementById(id); el.style.left = d.x + "%"; el.style.top = d.y + "%"; el.style.width = d.w + "%"; el.style.height = d.h + "%"; };
+    const up = (id, d) => { 
+        const el = document.getElementById(id); 
+        if(!el || !d) return;
+        el.style.left = d.x + "%"; 
+        el.style.top = d.y + "%"; 
+        el.style.width = d.w + "%"; 
+        el.style.height = d.h + "%"; 
+    };
     up('v-layer', s.video); 
     up('n-layer', s.news);
     document.getElementById('n-layer').style.backgroundColor = s.nBg;
@@ -160,7 +166,7 @@ onValue(ref(rtdb, 'kbs_multi_v1'), (snap) => {
 });
 
 /* ============================
-   NOTÍCIAS E CLIMA
+   NOTÍCIAS E CLIMA (MANTIDA)
 ============================ */
 
 let allArticles = [];
