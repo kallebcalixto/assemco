@@ -27,9 +27,9 @@
         .current-weather { display: flex; justify-content: space-around; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 20px; border-radius: 30px; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: left; }
         .temp-grande { font-size: 4.5rem; font-weight: bold; color: #f59e0b; line-height: 1; }
         .chart-container { height: 180px; background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 20px; margin-bottom: 15px; }
-        .qr-section { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .qr-code-img { width: 120px; height: 120px; background: white; padding: 8px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .qr-call { font-size: 1.1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; }
+        .-section { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .-code-img { width: 120px; height: 120px; background: white; padding: 8px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .-call { font-size: 1.1rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; }
         .banner-img { position: absolute; object-fit: fill; z-index: 50; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -56,9 +56,9 @@
             </div>
         </div>
         <div class="chart-container"><canvas id="weatherChart"></canvas></div>
-        <div class="qr-section">
-            <img class="qr-code-img" src="https://i.imgur.com/UfQjAQy.png">
-            <div class="qr-call">Entre no jornal da KBS TV</div>
+        <div class="-section">
+            <img class="-code-img" src="https://i.imgur.com/8UJxUMZ.png">
+            <div class="-call">Entre no jornal da KBS TV</div>
         </div>
     </div>
 </div>
