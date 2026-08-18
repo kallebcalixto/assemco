@@ -4,17 +4,13 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>KBS TV - Receptor Oficial</title>
-    <link href="https://vjs.zencdn.net/8.10.0/video-js.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER OTIMIZADO --- */
-        .video-js { width: 100% !important; height: 100% !important; }
-        .vjs-tech { object-fit: fill !important; -webkit-backface-visibility: hidden; } 
-        /* Esconde interface pesada */
-        .vjs-big-play-button, .vjs-loading-spinner, .vjs-control-bar { display: none !important; }
+        /* --- PLAYER NATIVO ESTÁVEL (SEM CORS ERROR) --- */
+        video { width: 100% !important; height: 100% !important; object-fit: fill !important; background: #000; }
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
         .news-card { background: #1e293b; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.4); animation: fadeIn 0.8s ease; flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
@@ -37,7 +33,7 @@
 <body onclick="liberarGeral()">
 
 <div id="v-layer" class="layer">
-    <video id="player" class="video-js vjs-default-skin" playsinline preload="auto"></video>
+    <video id="player" playsinline autoplay muted></video>
 </div>
 
 <div id="n-layer" class="layer news-box">
@@ -65,8 +61,6 @@
 
 <div id="banners-container"></div>
 
-<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
@@ -78,43 +72,27 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER ULTRA LEVE & ESTÁVEL 
+   PLAYER NATIVO ULTRA LEVE
 ============================ */
 
-const player = videojs('player', {
-    autoplay: 'any',
-    muted: false,
-    controls: false,
-    html5: {
-        vhs: {
-            enableLowInitialPlaylist: true,
-            fastQualityChange: true,
-            overrideNative: true,
-            handleManifestRedirects: true
-        }
-    }
-});
-
+const player = document.getElementById('player');
 const streamUrl = "https://live.kbstvpro.com.br/live/canal1.m3u8";
 let lastTime = -1;
 let freezeCount = 0;
 
 function loadSinal() {
-    player.src({
-        src: streamUrl,
-        type: "application/x-mpegURL"
-    });
+    player.src = streamUrl;
     player.play().catch(() => {});
 }
 
 window.liberarGeral = function() {
-    player.muted(false);
+    player.muted = false;
     player.play();
 };
 
 setInterval(() => {
-    if (!player.paused()) {
-        const current = player.currentTime();
+    if (!player.paused) {
+        const current = player.currentTime;
         if (current === lastTime) {
             freezeCount++;
             if (freezeCount >= 2) {
@@ -129,7 +107,7 @@ setInterval(() => {
 }, 5000);
 
 setInterval(loadSinal, 240000);
-player.on('error', () => setTimeout(loadSinal, 3000));
+player.addEventListener('error', () => setTimeout(loadSinal, 3000));
 window.addEventListener('online', () => loadSinal());
 loadSinal();
 
