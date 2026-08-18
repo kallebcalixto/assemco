@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>KBS TV - Receptor Oficial</title>
-    <!-- Biblioteca Hls.js essencial para Linux e navegadores de desktop -->
+    <!-- Hls.js universal para Windows, Linux, Android e iOS -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER ESTÁVEL --- */
+        /* --- PLAYER UNIVERSAL --- */
         video { width: 100% !important; height: 100% !important; object-fit: fill !important; background: #000; }
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
@@ -74,7 +74,7 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER COM HLS.JS (COMPATÍVEL COM LINUX)
+   PLAYER UNIVERSAL (HLS.JS SEGURO)
 ============================ */
 
 const player = document.getElementById('player');
@@ -84,7 +84,11 @@ let freezeCount = 0;
 
 function loadSinal() {
     if (Hls.isSupported()) {
-        const hls = new Hls();
+        const hls = new Hls({
+            xhrSetup: function (xhr, url) {
+                xhr.withCredentials = false; // Evita conflito de CORS entre domínios
+            }
+        });
         hls.loadSource(streamUrl);
         hls.attachMedia(player);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -207,7 +211,7 @@ async function showWeather() {
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     } catch (e) {}
-    setTimeout(() => { isWeatherShowing = false; currentIndex = 0; rotation(); }, 20000);
+    setTimeout(() => { isWeather_Showing = false; currentIndex = 0; rotation(); }, 20000);
 }
 
 function rotation() {
