@@ -78,7 +78,7 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER ULTRA LEVE & ESTÁVEL (COM CORREÇÃO DE CORS)
+   PLAYER ULTRA LEVE & ESTÁVEL 
 ============================ */
 
 const player = videojs('player', {
@@ -90,8 +90,7 @@ const player = videojs('player', {
             enableLowInitialPlaylist: true,
             fastQualityChange: true,
             overrideNative: true,
-            // Força ignorar restrições cruzadas de origem no player
-            withCredentials: false
+            handleManifestRedirects: true
         }
     }
 });
@@ -102,7 +101,7 @@ let freezeCount = 0;
 
 function loadSinal() {
     player.src({
-        src: streamUrl + "?t=" + Date.now(),
+        src: streamUrl,
         type: "application/x-mpegURL"
     });
     player.play().catch(() => {});
