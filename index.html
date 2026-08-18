@@ -9,7 +9,7 @@
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER NATIVO ESTÁVEL (SEM CORS ERROR) --- */
+        /* --- PLAYER NATIVO PURO (SEM BLOQUEIO) --- */
         video { width: 100% !important; height: 100% !important; object-fit: fill !important; background: #000; }
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
@@ -72,7 +72,7 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER NATIVO ULTRA LEVE
+   PLAYER NATIVO PURO
 ============================ */
 
 const player = document.getElementById('player');
