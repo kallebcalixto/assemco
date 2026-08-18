@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>KBS TV - Receptor Oficial</title>
-    <!-- Hls.js compatível com Firefox, Chrome, Opera e Linux -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- Clappr Player: Compatível com Windows, Linux, Manjaro, Chrome, Firefox e Opera -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@clappr/player@latest/dist/clappr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER UNIVERSAL ESTÁVEL --- */
-        video { width: 100% !important; height: 100% !important; object-fit: fill !important; background: #000; }
+        /* --- PLAYER CLAPPR UNIVERSAL --- */
+        #player { width: 100% !important; height: 100% !important; background: #000; }
+        #player video { width: 100% !important; height: 100% !important; object-fit: fill !important; }
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
         .news-card { background: #1e293b; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.4); animation: fadeIn 0.8s ease; flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
@@ -35,7 +36,7 @@
 <body onclick="liberarGeral()">
 
 <div id="v-layer" class="layer">
-    <video id="player" playsinline autoplay muted></video>
+    <div id="player"></div>
 </div>
 
 <div id="n-layer" class="layer news-box">
@@ -74,74 +75,24 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER UNIVERSAL (HLS.JS OTIMIZADO)
-============================ */
+   PLAYER CLAPPR (ZERO CORS / UNIVERSAL)
+================================ */
 
-const player = document.getElementById('player');
-const streamUrl = "https://live.kbstvpro.com.br/live/canal1.m3u8";
-let lastTime = -1;
-let freezeCount = 0;
-
-function loadSinal() {
-    if (Hls.isSupported()) {
-        const hls = new Hls({
-            xhrSetup: function (xhr, url) {
-                xhr.withCredentials = false;
-            },
-            autoStartLoad: true,
-            startLevel: -1
-        });
-        hls.loadSource(streamUrl);
-        hls.attachMedia(player);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            player.play().catch(() => {});
-        });
-        hls.on(Hls.Events.ERROR, function (event, data) {
-            if (data.fatal) {
-                switch (data.type) {
-                    case Hls.ErrorTypes.NETWORK_ERROR:
-                        hls.startLoad();
-                        break;
-                    case Hls.ErrorTypes.MEDIA_ERROR:
-                        hls.recoverMediaError();
-                        break;
-                    default:
-                        loadSinal();
-                        break;
-                }
-            }
-        });
-    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = streamUrl;
-        player.play().catch(() => {});
-    }
-}
+const player = new Clappr.Player({
+    source: "https://live.kbstvpro.com.br/live/canal1.m3u8",
+    parentId: "#player",
+    autoPlay: true,
+    mute: true,
+    height: "100%",
+    width: "100%",
+    hideMediaControl: true,
+    mediacontrol: { seekbar: false, buttons: '' }
+});
 
 window.liberarGeral = function() {
-    player.muted = false;
+    player.setMute(false);
     player.play();
 };
-
-setInterval(() => {
-    if (!player.paused) {
-        const current = player.currentTime;
-        if (current === lastTime) {
-            freezeCount++;
-            if (freezeCount >= 2) {
-                loadSinal();
-                freezeCount = 0;
-            }
-        } else {
-            freezeCount = 0;
-        }
-        lastTime = current;
-    }
-}, 5000);
-
-setInterval(loadSinal, 240000);
-player.addEventListener('error', () => setTimeout(loadSinal, 3000));
-window.addEventListener('online', () => loadSinal());
-loadSinal();
 
 /* ============================
    SINCRONIA ADMIN + BANNERS MP4
