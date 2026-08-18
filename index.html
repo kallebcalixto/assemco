@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>KBS TV - Receptor Oficial</title>
-    <!-- Clappr Player: Compatível com Windows, Linux, Manjaro, Chrome, Firefox e Opera -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@clappr/player@latest/dist/clappr.min.js"></script>
+    <!-- Plyr & Hls.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3/dist/plyr.css" />
+    <script src="https://cdn.jsdelivr.net/npm/plyr@3/dist/plyr.polyfilled.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER CLAPPR UNIVERSAL --- */
-        #player { width: 100% !important; height: 100% !important; background: #000; }
-        #player video { width: 100% !important; height: 100% !important; object-fit: fill !important; }
+        /* --- PLAYER PLYR UNIVERSAL --- */
+        .plyr { width: 100% !important; height: 100% !important; background: #000; }
+        .plyr video { width: 100% !important; height: 100% !important; object-fit: fill !important; }
+        .plyr__controls { display: none !important; } /* Esconde os controles para ficar igual ao seu painel */
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
         .news-card { background: #1e293b; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.4); animation: fadeIn 0.8s ease; flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
@@ -36,7 +39,7 @@
 <body onclick="liberarGeral()">
 
 <div id="v-layer" class="layer">
-    <div id="player"></div>
+    <video id="player" playsinline autoplay muted></video>
 </div>
 
 <div id="n-layer" class="layer news-box">
@@ -75,23 +78,37 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER CLAPPR (ZERO CORS / UNIVERSAL)
-================================ */
+   PLAYER PLYR COM HLS ANÔNIMO
+============================ */
 
-const player = new Clappr.Player({
-    source: "https://live.kbstvpro.com.br/live/canal1.m3u8",
-    parentId: "#player",
-    autoPlay: true,
-    mute: true,
-    height: "100%",
-    width: "100%",
-    hideMediaControl: true,
-    mediacontrol: { seekbar: false, buttons: '' }
-});
+const video = document.getElementById('player');
+const source = 'https://live.kbstvpro.com.br/live/canal1.m3u8';
+let player;
+
+if (Hls.isSupported()) {
+    const hls = new Hls({
+        xhrSetup: function (xhr, url) {
+            xhr.open('GET', url, true);
+            xhr.withCredentials = false; // Ignora o bloqueio de credenciais do GitHub Pages
+        }
+    });
+    hls.loadSource(source);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        player = new Plyr(video, { autoplay: true, muted: true });
+        video.play().catch(() => {});
+    });
+} else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = source;
+    player = new Plyr(video, { autoplay: true, muted: true });
+    video.play().catch(() => {});
+}
 
 window.liberarGeral = function() {
-    player.setMute(false);
-    player.play();
+    if (video) {
+        video.muted = false;
+        video.play();
+    }
 };
 
 /* ============================
