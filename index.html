@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>KBS TV - Receptor Oficial</title>
-    <!-- Hls.js obrigatório para o Linux/Manjaro não baixar o arquivo -->
+    <!-- Hls.js compatível com Firefox, Chrome, Opera e Linux -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER PERFEITO E RESPONSIVO --- */
+        /* --- PLAYER UNIVERSAL ESTÁVEL --- */
         video { width: 100% !important; height: 100% !important; object-fit: fill !important; background: #000; }
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
@@ -74,7 +74,7 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER UNIVERSAL (HLS.JS PARA WINDOWS E LINUX)
+   PLAYER UNIVERSAL (HLS.JS OTIMIZADO)
 ============================ */
 
 const player = document.getElementById('player');
@@ -87,12 +87,29 @@ function loadSinal() {
         const hls = new Hls({
             xhrSetup: function (xhr, url) {
                 xhr.withCredentials = false;
-            }
+            },
+            autoStartLoad: true,
+            startLevel: -1
         });
         hls.loadSource(streamUrl);
         hls.attachMedia(player);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
             player.play().catch(() => {});
+        });
+        hls.on(Hls.Events.ERROR, function (event, data) {
+            if (data.fatal) {
+                switch (data.type) {
+                    case Hls.ErrorTypes.NETWORK_ERROR:
+                        hls.startLoad();
+                        break;
+                    case Hls.ErrorTypes.MEDIA_ERROR:
+                        hls.recoverMediaError();
+                        break;
+                    default:
+                        loadSinal();
+                        break;
+                }
+            }
         });
     } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
         player.src = streamUrl;
