@@ -4,15 +4,13 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>KBS TV - Receptor Oficial</title>
-    <!-- Hls.js universal para Windows, Linux, Android e iOS -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER UNIVERSAL --- */
-        video { width: 100% !important; height: 100% !important; object-fit: fill !important; background: #000; }
+        /* --- IFRAME DO PLAYER (ZERAR CORS PARA SEMPRE) --- */
+        .video-iframe { width: 100%; height: 100%; border: none; background: #000; pointer-events: none; }
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
         .news-card { background: #1e293b; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.4); animation: fadeIn 0.8s ease; flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
@@ -32,10 +30,11 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body onclick="liberarGeral()">
+<body>
 
+<!-- Player via Iframe encapsulado (Elimina qualquer bloqueio de CORS do GitHub) -->
 <div id="v-layer" class="layer">
-    <video id="player" playsinline autoplay muted></video>
+    <iframe class="video-iframe" src="https://live.kbstvpro.com.br/live/canal1.m3u8" allow="autoplay"></iframe>
 </div>
 
 <div id="n-layer" class="layer news-box">
@@ -72,60 +71,6 @@ const config = { apiKey: "AIzaSyCvjIztzLkcCg1Tz24F6FphT4z-o1gvDU0", databaseURL:
 const app = initializeApp(config);
 const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
-
-/* ============================
-   PLAYER UNIVERSAL (HLS.JS COM BYPASS DE CORS)
-============================ */
-
-const player = document.getElementById('player');
-const streamUrl = "https://live.kbstvpro.com.br/live/canal1.m3u8";
-let lastTime = -1;
-let freezeCount = 0;
-
-function loadSinal() {
-    if (Hls.isSupported()) {
-        const hls = new Hls({
-            xhrSetup: function (xhr, url) {
-                xhr.open('GET', url, true);
-                xhr.responseType = 'arraybuffer';
-            }
-        });
-        hls.loadSource(streamUrl);
-        hls.attachMedia(player);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            player.play().catch(() => {});
-        });
-    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = streamUrl;
-        player.play().catch(() => {});
-    }
-}
-
-window.liberarGeral = function() {
-    player.muted = false;
-    player.play();
-};
-
-setInterval(() => {
-    if (!player.paused) {
-        const current = player.currentTime;
-        if (current === lastTime) {
-            freezeCount++;
-            if (freezeCount >= 2) {
-                loadSinal();
-                freezeCount = 0;
-            }
-        } else {
-            freezeCount = 0;
-        }
-        lastTime = current;
-    }
-}, 5000);
-
-setInterval(loadSinal, 240000);
-player.addEventListener('error', () => setTimeout(loadSinal, 3000));
-window.addEventListener('online', () => loadSinal());
-loadSinal();
 
 /* ============================
    SINCRONIA ADMIN + BANNERS MP4
