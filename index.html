@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>KBS TV - Receptor Oficial</title>
+    <!-- Biblioteca Hls.js essencial para Linux e navegadores de desktop -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; color: white; cursor: pointer; }
         .layer { position: absolute; overflow: hidden; transition: 0.3s ease-out; }
         
-        /* --- PLAYER NATIVO PURO (SEM BLOQUEIO) --- */
+        /* --- PLAYER ESTÁVEL --- */
         video { width: 100% !important; height: 100% !important; object-fit: fill !important; background: #000; }
 
         .news-box { padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
@@ -72,7 +74,7 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER NATIVO PURO
+   PLAYER COM HLS.JS (COMPATÍVEL COM LINUX)
 ============================ */
 
 const player = document.getElementById('player');
@@ -81,8 +83,17 @@ let lastTime = -1;
 let freezeCount = 0;
 
 function loadSinal() {
-    player.src = streamUrl;
-    player.play().catch(() => {});
+    if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(streamUrl);
+        hls.attachMedia(player);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            player.play().catch(() => {});
+        });
+    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        player.src = streamUrl;
+        player.play().catch(() => {});
+    }
 }
 
 window.liberarGeral = function() {
