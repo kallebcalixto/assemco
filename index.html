@@ -74,7 +74,7 @@ const rtdb = getDatabase(app);
 const db = getFirestore(initializeApp({ apiKey: "AIzaSyAGdlkrOftGtg5RaTVVF-enXzE4uQaYoLM", projectId: "jornal-automatico" }, "news"));
 
 /* ============================
-   PLAYER UNIVERSAL (HLS.JS SEGURO)
+   PLAYER UNIVERSAL (HLS.JS COM BYPASS DE CORS)
 ============================ */
 
 const player = document.getElementById('player');
@@ -86,7 +86,8 @@ function loadSinal() {
     if (Hls.isSupported()) {
         const hls = new Hls({
             xhrSetup: function (xhr, url) {
-                xhr.withCredentials = false; // Evita conflito de CORS entre domínios
+                xhr.open('GET', url, true);
+                xhr.responseType = 'arraybuffer';
             }
         });
         hls.loadSource(streamUrl);
@@ -211,7 +212,7 @@ async function showWeather() {
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     } catch (e) {}
-    setTimeout(() => { isWeather_Showing = false; currentIndex = 0; rotation(); }, 20000);
+    setTimeout(() => { isWeatherShowing = false; currentIndex = 0; rotation(); }, 20000);
 }
 
 function rotation() {
